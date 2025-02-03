@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>타자 연습 게임</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      text-align: center;
+      margin: 0;
+      padding: 0;
+      background-color: #f0f8ff;
+    }
+    .container {
+      max-width: 600px;
+      margin: 50px auto;
+      padding: 20px;
+      background: #fff;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
+    .word {
+      font-size: 24px;
+      font-weight: bold;
+      color: #333;
+      margin-bottom: 20px;
+    }
+    .pronunciation {
+      font-size: 18px;
+      color: #888;
+      margin-bottom: 20px;
+    }
+    .meaning {
+      font-size: 18px;
+      color: #555;
+      margin-bottom: 20px;
+    }
+    input {
+      padding: 10px;
+      font-size: 18px;
+      width: 100%;
+      box-sizing: border-box;
+      margin-bottom: 10px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+    }
+    .score {
+      margin-top: 20px;
+      font-size: 18px;
+      font-weight: bold;
+      color: #0078d7;
+    }
+    .correct {
+      color: green;
+    }
+    .wrong {
+      color: red;
+    }
+    .timer {
+      font-size: 20px;
+      margin-top: 20px;
+      color: red;
+    }
+    .timer-select {
+      margin-top: 20px;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+    }
+    .timer-select label {
+      font-size: 16px;
+      margin-right: 10px;
+    }
+    select {
+      padding: 8px;
+      font-size: 16px;
+      border: 1px solid #ccc;
+      border-radius: 5px;
+      background-color: #f8f8f8;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+    select:hover {
+      background-color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <div class="word" id="word">Ready?</div>
+    <div class="pronunciation" id="pronunciation">발음 기호 여기에 표시됩니다!</div>
+    <div class="meaning" id="meaning">뜻이 여기에 표시됩니다!</div>
+    <input type="text" id="input" placeholder="단어를 입력하세요" autocomplete="off" />
+    
+    <div class="timer-select">
+      <label for="timer-selection">타이머 선택:</label>
+      <select id="timer-selection">
+        <option value="60">1분</option>
+        <option value="120">2분</option>
+        <option value="180">3분</option>
+        <option value="240">4분</option>
+        <option value="300">5분</option>
+      </select>
+    </div>
+
+    <div class="score" id="score">점수: 0</div>
+    <div class="timer" id="timer">남은 시간: 120초</div>
+  </div>
+
+  <script>
+    let currentWord = {};
+    let score = 0;
+    let wordCount = 0;
+    let timer;
+    let typingTimer;
+    let words = [];
+
+    const wordElement = document.getElementById("word");
+    const pronunciationElement = document.getElementById("pronunciation");
+    const meaningElement = document.getElementById("meaning");
+    const inputElement = document.getElementById("input");
+    const scoreElement = document.getElementById("score");
+    const timerElement = document.getElementById("timer");
+    const timerSelection = document.getElementById("timer-selection");
+
+    async function loadWords() {
+      const response = await fetch('words.json');
+      words = await response.json();
+      setNewWord();
+    }
+
+    function setNewWord() {
+      const randomIndex = Math.floor(Math.random() * words.length);
+      currentWord = words[randomIndex];
+      wordElement.textContent = currentWord.word;
+      pronunciationElement.textContent = `발음: ${currentWord.pronunciation}`;
+      meaningElement.textContent = `뜻: ${currentWord.meaning}`;
+      inputElement.value = "";
+      speakWord(currentWord.word);  // 새 단어가 나오면 발음도 같이 읽음
+    }
+
+    function startTimer(selectedTime) {
+      timer = selectedTime;
+      typingTimer = setInterval(() => {
+        if (timer > 0) {
+          timer--;
+          timerElement.textContent = `남은 시간: ${timer}초`;
+        } else {
+          clearInterval(typingTimer);
+          alert(`시간이 끝났습니다! 총 타자 수: ${wordCount}, 최종 점수: ${score}`);
+        }
+      }, 1000);
+    }
+
+    inputElement.addEventListener("keyup", (e) => {
+      if (e.key === "Enter") {
+        if (inputElement.value.trim() === currentWord.word) {
+          score += 10;
+          wordCount++;
+          scoreElement.textContent = `점수: ${score}`;
+          setNewWord();
+        } else {
+          alert("틀렸습니다! 다시 시도하세요.");
+        }
+      }
+    });
+
+    timerSelection.addEventListener("change", () => {
+      clearInterval(typingTimer);
+      startTimer(Number(timerSelection.value));
+    });
+
+    // 영어 발음을 음성 합성으로 읽어주는 함수
+    function speakWord(word) {
+      const utterance = new SpeechSynthesisUtterance(word);
+      const voices = speechSynthesis.getVoices();  // 사용 가능한 음성 목록
+
+      // 미국 영어 음성 선택
+      const selectedVoice = voices.find(voice => voice.lang === "en-US");
+      
+      // 음성 설정
+      utterance.voice = selectedVoice;
+      utterance.rate = 1;  // 기본 속도
+      utterance.pitch = 0.7; // 기본 피치
+
+      speechSynthesis.speak(utterance);  // 발음 실행
+    }
+
+    loadWords();
+  </script>
+</body>
+</html>
